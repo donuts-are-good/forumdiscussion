@@ -8,43 +8,16 @@ import (
 	"html/template"
 	"net/http"
 	"net/mail"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct {
-	ID       int `db:"id"`
-	RoleIDs  []int
-	Email    string `db:"email" json:"email,omitempty"`
-	Password string `db:"password" json:"password,omitempty"`
-}
-
-type Role struct {
-	ID       int    `db:"id" json:"id,omitempty"`
-	Name     string `db:"name" json:"name,omitempty"`
-	IsAdmin  bool   `db:"is_admin" json:"is_admin,omitempty"`
-	IsBanned bool   `db:"is_banned" json:"is_banned,omitempty"`
-}
-
-type Discussion struct {
-	ID        int       `db:"id" json:"id,omitempty"`
-	Owner     User      `json:"owner,omitempty"`
-	Title     string    `db:"title" json:"title,omitempty"`
-	Body      string    `db:"body" json:"body,omitempty"`
-	CreatedAt time.Time `db:"created_at" json:"created_at,omitempty"`
-}
-
-type Reply struct {
-	ID           int       `db:"id" json:"id,omitempty"`
-	DiscussionID int       `db:"discussion_id" json:"discussion_id,omitempty"`
-	Owner        User      `json:"owner,omitempty"`
-	Body         string    `db:"body" json:"body,omitempty"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at,omitempty"`
-}
-
 var users = make(map[string]*User)
-var tmpl = template.Must(template.ParseFiles("templates/index.html", "templates/login.html", "templates/register.html", "templates/404.html"))
+var tmpl = template.Must(template.ParseFiles(
+	"templates/index.html",
+	"templates/login.html",
+	"templates/register.html",
+	"templates/404.html"))
 
 func main() {
 	r := http.NewServeMux()
