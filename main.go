@@ -14,24 +14,33 @@ import (
 )
 
 type User struct {
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty"`
+	ID       int `db:"id"`
+	RoleIDs  []int
+	Email    string `db:"email" json:"email,omitempty"`
+	Password string `db:"password" json:"password,omitempty"`
+}
+
+type Role struct {
+	ID       int    `db:"id" json:"id,omitempty"`
+	Name     string `db:"name" json:"name,omitempty"`
+	IsAdmin  bool   `db:"is_admin" json:"is_admin,omitempty"`
+	IsBanned bool   `db:"is_banned" json:"is_banned,omitempty"`
 }
 
 type Discussion struct {
-	ID        int       `json:"id,omitempty"`
+	ID        int       `db:"id" json:"id,omitempty"`
 	Owner     User      `json:"owner,omitempty"`
-	Title     string    `json:"title,omitempty"`
-	Body      string    `json:"body,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	Title     string    `db:"title" json:"title,omitempty"`
+	Body      string    `db:"body" json:"body,omitempty"`
+	CreatedAt time.Time `db:"created_at" json:"created_at,omitempty"`
 }
 
 type Reply struct {
-	ID           int       `json:"id,omitempty"`
-	DiscussionID int       `json:"discussion_id,omitempty"`
+	ID           int       `db:"id" json:"id,omitempty"`
+	DiscussionID int       `db:"discussion_id" json:"discussion_id,omitempty"`
 	Owner        User      `json:"owner,omitempty"`
-	Body         string    `json:"body,omitempty"`
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	Body         string    `db:"body" json:"body,omitempty"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at,omitempty"`
 }
 
 var users = make(map[string]*User)
