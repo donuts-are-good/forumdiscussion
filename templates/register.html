@@ -1,0 +1,17 @@
+<!-- templates/register.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+</head>
+<body>
+    <form method="POST" action="/register">
+        <label>Email:</label><br>
+        <input type="email" name="email" required><br><br>
+        <label>Password:</label><br>
+        <input type="password" name="password" required><br><br>
+        {{ .csrfField }}
+        <button type="submit">Register</button>
+    </form>
+</body>
+</html>

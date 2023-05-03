@@ -1,0 +1,17 @@
+<!-- templates/login.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+    <form method="POST" action="/login">
+        <label>Email:</label><br>
+        <input type="email" name="email" required><br><br>
+        <label>Password:</label><br>
+        <input type="password" name="password" required><br><br>
+        {{ .csrfField }}
+        <button type="submit">Login</button>
+    </form>
+</body>
+</html>

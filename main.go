@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/mail"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -15,6 +16,22 @@ import (
 type User struct {
 	Email    string `json:"email,omitempty"`
 	Password string `json:"password,omitempty"`
+}
+
+type Discussion struct {
+	ID        int       `json:"id,omitempty"`
+	Owner     User      `json:"owner,omitempty"`
+	Title     string    `json:"title,omitempty"`
+	Body      string    `json:"body,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+}
+
+type Reply struct {
+	ID           int       `json:"id,omitempty"`
+	DiscussionID int       `json:"discussion_id,omitempty"`
+	Owner        User      `json:"owner,omitempty"`
+	Body         string    `json:"body,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
 }
 
 var users = make(map[string]*User)
