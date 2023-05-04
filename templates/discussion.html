@@ -8,11 +8,13 @@
     <h1>{{.Title}}</h1>
     <p>Posted by {{.Owner.Email}} at {{.CreatedAt}}</p>
     <p>{{.Body}}</p>
+    <p><a href="/new_reply?discussion_id={{.ID}}">Reply to the discussion</a></p>
     <h2>Replies</h2>
     <ul>
         {{range .Replies}}
         <li>
             <p>{{.Body}} - by {{.Owner.Email}} at {{.CreatedAt}}</p>
+            <p><a href="/new_reply?discussion_id={{$.ID}}&parent_id={{.ID}}">Reply to this comment</a></p>
         </li>
         {{end}}
     </ul>
