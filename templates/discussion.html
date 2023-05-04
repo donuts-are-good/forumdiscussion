@@ -1,31 +1,35 @@
 <!-- templates/discussion.html -->
+{{define "reply"}}
+<li>
+    <p>{{.Body}} - by {{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}} at {{.CreatedAt}}</p>
+    <p><a href="/new_reply/{{$.DiscussionID}}?parent_id={{.ID}}">Reply to this comment</a></p>
+    {{if .Children}}
+    <ul>
+        {{range .Children}}
+            {{template "reply" .}}
+        {{end}}
+    </ul>
+    {{end}}
+</li>
+{{end}}
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Discussion</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+
 </head>
 <body>
-    <h1>{{.Title}}</h1>
-    <p>Posted by {{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}} at {{.CreatedAt}}</p>
-    <p>{{.Body}}</p>
-    <p><a href="/new_reply/{{.ID}}">Reply to the discussion</a></p>
+    <h1>{{.Discussion.Title}}</h1>
+    <p>Posted by {{.Discussion.Owner.Profile.Username}}#{{.Discussion.Owner.Profile.Discriminator}} at {{.Discussion.CreatedAt}}</p>
+    <p>{{.Discussion.Body}}</p>
+    <p><a href="/new_reply/{{.DiscussionID}}">Reply to the discussion</a></p>
     <h2>Replies</h2>
     <ul>
-        {{template "replies" .Replies}}
+        {{range .Discussion.Replies}}
+            {{template "reply" .}}
+        {{end}}
     </ul>
 </body>
-
-{{define "replies"}}
-<ul>
-    {{range .}}
-    <li>
-        <p>{{.Body}} - by {{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}} at {{.CreatedAt}}</p>
-        <p><a href="/new_reply/{{$.ID}}?parent_id={{.ID}}">Reply to this comment</a></p>
-        {{if .Children}}
-        {{template "replies" .Children}}
-        {{end}}
-    </li>
-    {{end}}
-</ul>
-{{end}}
 </html>

@@ -152,25 +152,32 @@ func newDiscussion(w http.ResponseWriter, r *http.Request) {
 func newReply(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	discussionID := vars["discussionID"]
+	log.Println("discussionID: ", discussionID)
 	parentID := r.URL.Query().Get("parent_id")
+	log.Println("parentID: ", parentID)
 
 	if r.Method == "GET" {
 		tmpl := template.Must(template.ParseFiles("templates/new_reply.html"))
 
 		data := map[string]interface{}{
-			"DiscussionID": discussionID,
+			"ID": discussionID,
 		}
 
 		if parentID != "" {
 			db := dbPool.Get().(*sql.DB)
 			defer dbPool.Put(db)
+			log.Println("discussionID: ", discussionID)
+			log.Println("parentID2: ", parentID)
 
 			parentReply, err := GetReplyByID(db, parentID)
+			log.Println("parentReply: ", parentReply)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			data["ParentReply"] = parentReply
+			log.Println("parentReply2: ", parentReply)
+
 		}
 
 		tmpl.Execute(w, data)
@@ -187,6 +194,10 @@ func newReply(w http.ResponseWriter, r *http.Request) {
 		discussionID := r.FormValue("discussion_id")
 		parentID := r.FormValue("parent_id")
 		body := r.FormValue("body")
+
+		log.Println("discussion_id: ", discussionID)
+		log.Println("parent_id: ", parentID)
+		log.Println("body: ", body)
 
 		if parentID == "" {
 			_, err = db.Exec("INSERT INTO replies (discussion_id, user_email, body) VALUES (?, ?, ?)", discussionID, userEmail, body)
@@ -216,7 +227,6 @@ func discussions(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/discussions.html"))
 	tmpl.Execute(w, discussions)
 }
-
 func discussion(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -242,8 +252,16 @@ func discussion(w http.ResponseWriter, r *http.Request) {
 
 	discussion.Replies = BuildReplyTree(replies)
 
+	data := struct {
+		Discussion   Discussion
+		DiscussionID string
+	}{
+		discussion,
+		id,
+	}
+
 	tmpl := template.Must(template.ParseFiles("templates/discussion.html"))
-	tmpl.Execute(w, discussion)
+	tmpl.Execute(w, data)
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {

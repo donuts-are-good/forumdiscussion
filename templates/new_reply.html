@@ -3,6 +3,7 @@
 <html>
 <head>
     <title>New Reply</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
 </head>
 <body>
     <h1>Post a reply</h1>
@@ -13,8 +14,8 @@
             {{.ParentReply.Body}}
         </blockquote>
     {{end}}
-    <form method="POST" action="/new_reply/{{.DiscussionID}}">
-        <input type="hidden" name="discussion_id" value="{{.DiscussionID}}">
+    <form method="POST" action="/new_reply/{{.ID}}">
+        <input type="hidden" name="discussion_id" value="{{.ID}}">
         {{if .ParentReply}}
             <input type="hidden" name="parent_id" value="{{.ParentReply.ID}}">
         {{end}}
