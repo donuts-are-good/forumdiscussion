@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/mail"
 
+	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,10 +21,12 @@ var tmpl = template.Must(template.ParseFiles(
 	"templates/404.html"))
 
 func main() {
-	r := http.NewServeMux()
+	r := mux.NewRouter()
 	r.HandleFunc("/", index)
 	r.HandleFunc("/login", login)
 	r.HandleFunc("/register", register)
+	r.HandleFunc("/discussions", discussions)
+	r.HandleFunc("/discussion/{id}", discussion)
 	http.ListenAndServe(":8080", r)
 }
 
@@ -114,6 +117,41 @@ func register(w http.ResponseWriter, r *http.Request) {
 	users[email] = user
 
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
+
+func discussions(w http.ResponseWriter, r *http.Request) {
+	db := getDB()
+	defer db.Close()
+
+	discussions, err := GetAllDiscussions(db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFiles("templates/discussions.html"))
+	tmpl.Execute(w, discussions)
+}
+
+func discussion(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	if id == "" {
+		http.Error(w, "Missing discussion ID", http.StatusBadRequest)
+		return
+	}
+
+	db := getDB()
+	defer db.Close()
+
+	discussion, err := GetDiscussionByID(db, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFiles("templates/discussion.html"))
+	tmpl.Execute(w, discussion)
 }
 
 func hashPassword(password string) (string, error) {

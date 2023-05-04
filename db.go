@@ -1,6 +1,17 @@
 package main
 
-import "database/sql"
+import (
+	"database/sql"
+	"log"
+)
+
+func getDB() *sql.DB {
+	db, err := sql.Open("sqlite3", "sqlite.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return db
+}
 
 func (u *User) GetRoles(db *sql.DB) ([]Role, error) {
 	roles := []Role{}
@@ -56,4 +67,31 @@ func GetUserRoleIDs(db *sql.DB, userID int) ([]int, error) {
 	}
 
 	return roleIDs, nil
+}
+
+func GetDiscussionByID(db *sql.DB, id string) (Discussion, error) {
+	var discussion Discussion
+	err := db.QueryRow("SELECT id, user_email, title, body, created_at FROM discussions WHERE id = ?", id).Scan(&discussion.ID, &discussion.Owner.Email, &discussion.Title, &discussion.Body, &discussion.CreatedAt)
+	if err != nil {
+		return Discussion{}, err
+	}
+	return discussion, nil
+}
+
+func GetAllDiscussions(db *sql.DB) ([]Discussion, error) {
+	rows, err := db.Query("SELECT id, user_email, title, body, created_at FROM discussions")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var discussions []Discussion
+	for rows.Next() {
+		var discussion Discussion
+		if err := rows.Scan(&discussion.ID, &discussion.Owner.Email, &discussion.Title, &discussion.Body, &discussion.CreatedAt); err != nil {
+			return nil, err
+		}
+		discussions = append(discussions, discussion)
+	}
+	return discussions, nil
 }
