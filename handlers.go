@@ -150,9 +150,30 @@ func newDiscussion(w http.ResponseWriter, r *http.Request) {
 }
 
 func newReply(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	discussionID := vars["discussionID"]
+	parentID := r.URL.Query().Get("parent_id")
+
 	if r.Method == "GET" {
 		tmpl := template.Must(template.ParseFiles("templates/new_reply.html"))
-		tmpl.Execute(w, nil)
+
+		data := map[string]interface{}{
+			"DiscussionID": discussionID,
+		}
+
+		if parentID != "" {
+			db := dbPool.Get().(*sql.DB)
+			defer dbPool.Put(db)
+
+			parentReply, err := GetReplyByID(db, parentID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			data["ParentReply"] = parentReply
+		}
+
+		tmpl.Execute(w, data)
 	} else if r.Method == "POST" {
 		userEmail, err := getUserEmailCookie(r)
 		if err != nil {
@@ -197,10 +218,8 @@ func discussions(w http.ResponseWriter, r *http.Request) {
 }
 
 func discussion(w http.ResponseWriter, r *http.Request) {
-	log.Println("discussion handler")
 	vars := mux.Vars(r)
 	id := vars["id"]
-	log.Println("ID from path: ", id)
 	if id == "" {
 		http.Error(w, "Missing discussion ID", http.StatusBadRequest)
 		return
@@ -214,6 +233,14 @@ func discussion(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	replies, err := GetRepliesByDiscussionID(db, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	discussion.Replies = BuildReplyTree(replies)
 
 	tmpl := template.Must(template.ParseFiles("templates/discussion.html"))
 	tmpl.Execute(w, discussion)

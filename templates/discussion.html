@@ -6,17 +6,26 @@
 </head>
 <body>
     <h1>{{.Title}}</h1>
-    <p>Posted by {{.Owner.Email}} at {{.CreatedAt}}</p>
+    <p>Posted by {{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}} at {{.CreatedAt}}</p>
     <p>{{.Body}}</p>
-    <p><a href="/new_reply?discussion_id={{.ID}}">Reply to the discussion</a></p>
+    <p><a href="/new_reply/{{.ID}}">Reply to the discussion</a></p>
     <h2>Replies</h2>
     <ul>
-        {{range .Replies}}
-        <li>
-            <p>{{.Body}} - by {{.Owner.Email}} at {{.CreatedAt}}</p>
-            <p><a href="/new_reply?discussion_id={{$.ID}}&parent_id={{.ID}}">Reply to this comment</a></p>
-        </li>
-        {{end}}
+        {{template "replies" .Replies}}
     </ul>
 </body>
+
+{{define "replies"}}
+<ul>
+    {{range .}}
+    <li>
+        <p>{{.Body}} - by {{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}} at {{.CreatedAt}}</p>
+        <p><a href="/new_reply/{{$.ID}}?parent_id={{.ID}}">Reply to this comment</a></p>
+        {{if .Children}}
+        {{template "replies" .Children}}
+        {{end}}
+    </li>
+    {{end}}
+</ul>
+{{end}}
 </html>

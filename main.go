@@ -13,6 +13,7 @@ import (
 
 	"sync"
 
+	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -35,16 +36,35 @@ func main() {
 			return db
 		},
 	}
-	r := http.NewServeMux()
+	r := mux.NewRouter()
 	r.HandleFunc("/", index)
 	r.HandleFunc("/login", login)
 	r.HandleFunc("/register", register)
 	r.HandleFunc("/discussions", discussions)
 	r.HandleFunc("/discussion/{id}", discussion)
 	r.HandleFunc("/new_discussion", newDiscussion)
-	r.HandleFunc("/new_reply", newReply)
+	r.HandleFunc("/new_reply/{discussionID}", newReply)
 	r.HandleFunc("/settings", settings)
+	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+
 	http.ListenAndServe(":8080", r)
+}
+
+func BuildReplyTree(replies []*Reply) []*Reply {
+	replyMap := make(map[int]*Reply)
+	for _, reply := range replies {
+		replyMap[reply.ID] = reply
+	}
+	var rootReplies []*Reply
+	for _, reply := range replies {
+		if reply.ParentID == nil {
+			rootReplies = append(rootReplies, reply)
+		} else {
+			parentReply := replyMap[*reply.ParentID]
+			parentReply.Children = append(parentReply.Children, reply)
+		}
+	}
+	return rootReplies
 }
 
 func setUserEmailCookie(w http.ResponseWriter, email string) {
@@ -119,5 +139,3 @@ func verifyCSRFToken(r *http.Request) error {
 	}
 	return nil
 }
-
-

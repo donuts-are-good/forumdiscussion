@@ -9,12 +9,12 @@
     {{if .ParentReply}}
         <h3>Replying to:</h3>
         <blockquote>
-            <strong>{{.ParentReply.UserEmail}}</strong> wrote:<br>
+            <strong>{{.ParentReply.Owner.Email}}</strong> wrote:<br>
             {{.ParentReply.Body}}
         </blockquote>
     {{end}}
-    <form method="POST" action="/new_reply">
-        <input type="hidden" name="discussion_id" value="{{.ID}}">
+    <form method="POST" action="/new_reply/{{.DiscussionID}}">
+        <input type="hidden" name="discussion_id" value="{{.DiscussionID}}">
         {{if .ParentReply}}
             <input type="hidden" name="parent_id" value="{{.ParentReply.ID}}">
         {{end}}
