@@ -10,6 +10,7 @@ import (
 	"net/mail"
 
 	"github.com/gorilla/mux"
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,12 +22,14 @@ var tmpl = template.Must(template.ParseFiles(
 	"templates/404.html"))
 
 func main() {
-	r := mux.NewRouter()
+	r := http.NewServeMux()
 	r.HandleFunc("/", index)
 	r.HandleFunc("/login", login)
 	r.HandleFunc("/register", register)
 	r.HandleFunc("/discussions", discussions)
 	r.HandleFunc("/discussion/{id}", discussion)
+	r.HandleFunc("/new_discussion", newDiscussion)
+	r.HandleFunc("/new_reply", newReply)
 	http.ListenAndServe(":8080", r)
 }
 
@@ -117,6 +120,68 @@ func register(w http.ResponseWriter, r *http.Request) {
 	users[email] = user
 
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
+
+func newDiscussion(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		tmpl := template.Must(template.ParseFiles("templates/new_discussion.html"))
+		tmpl.Execute(w, nil)
+	} else if r.Method == "POST" {
+		cookie, err := r.Cookie("user_email")
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		userEmail := cookie.Value
+
+		db := getDB()
+		defer db.Close()
+
+		title := r.FormValue("title")
+		body := r.FormValue("body")
+
+		_, err = db.Exec("INSERT INTO discussions (user_email, title, body) VALUES (?, ?, ?)", userEmail, title, body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/discussions", http.StatusSeeOther)
+	}
+}
+
+func newReply(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		tmpl := template.Must(template.ParseFiles("templates/new_reply.html"))
+		tmpl.Execute(w, nil)
+	} else if r.Method == "POST" {
+		cookie, err := r.Cookie("user_email")
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		userEmail := cookie.Value
+
+		db := getDB()
+		defer db.Close()
+
+		discussionID := r.FormValue("discussion_id")
+		parentID := r.FormValue("parent_id")
+		body := r.FormValue("body")
+
+		if parentID == "" {
+			_, err = db.Exec("INSERT INTO replies (discussion_id, user_email, body) VALUES (?, ?, ?)", discussionID, userEmail, body)
+		} else {
+			_, err = db.Exec("INSERT INTO replies (discussion_id, parent_id, user_email, body) VALUES (?, ?, ?, ?)", discussionID, parentID, userEmail, body)
+		}
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/discussion/"+discussionID, http.StatusSeeOther)
+	}
 }
 
 func discussions(w http.ResponseWriter, r *http.Request) {
