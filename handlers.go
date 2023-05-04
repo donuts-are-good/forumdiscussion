@@ -38,8 +38,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 	db := dbPool.Get().(*sql.DB)
 	defer dbPool.Put(db)
 
-	var hashedPassword string
-	err := db.QueryRow("SELECT password FROM users WHERE email = ?", email).Scan(&hashedPassword)
+	var hashedPassword, username string
+	err := db.QueryRow("SELECT password, username FROM users WHERE email = ?", email).Scan(&hashedPassword, &username)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
@@ -54,10 +54,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set user's email in a secure cookie
 	setUserEmailCookie(w, email)
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	if username == "" {
+		http.Redirect(w, r, "/settings", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +106,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = db.Exec("INSERT INTO users (email, password) VALUES (?, ?)", email, hashedPassword)
+	_, err = db.Exec("INSERT INTO users (email, password, username) VALUES (?, ?, ?)", email, hashedPassword, "")
 	if err != nil {
 		http.Error(w, "Error creating user", http.StatusInternalServerError)
 		return
@@ -111,6 +114,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
+
 func newDiscussion(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		tmpl := template.Must(template.ParseFiles("templates/new_discussion.html"))
@@ -125,10 +129,17 @@ func newDiscussion(w http.ResponseWriter, r *http.Request) {
 		db := dbPool.Get().(*sql.DB)
 		defer dbPool.Put(db)
 
+		var userID int
+		err = db.QueryRow("SELECT id FROM users WHERE email = ?", userEmail).Scan(&userID)
+		if err != nil {
+			http.Error(w, "Error retrieving user ID", http.StatusInternalServerError)
+			return
+		}
+
 		title := r.FormValue("title")
 		body := r.FormValue("body")
 
-		_, err = db.Exec("INSERT INTO discussions (user_email, title, body) VALUES (?, ?, ?)", userEmail, title, body)
+		_, err = db.Exec("INSERT INTO discussions (user_id, title, body) VALUES (?, ?, ?)", userID, title, body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -186,8 +197,10 @@ func discussions(w http.ResponseWriter, r *http.Request) {
 }
 
 func discussion(w http.ResponseWriter, r *http.Request) {
+	log.Println("discussion handler")
 	vars := mux.Vars(r)
 	id := vars["id"]
+	log.Println("ID from path: ", id)
 	if id == "" {
 		http.Error(w, "Missing discussion ID", http.StatusBadRequest)
 		return
@@ -205,6 +218,7 @@ func discussion(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/discussion.html"))
 	tmpl.Execute(w, discussion)
 }
+
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	tmpl.ExecuteTemplate(w, "404.html", nil)
@@ -245,6 +259,9 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 		if currentUser.Profile.Discriminator == 0 {
 			currentUser.Profile.Discriminator = rand.Intn(9999) // Generate a random number between 0 and 9999
+			if currentUser.Profile.Discriminator < 1000 {
+				currentUser.Profile.Discriminator += 1000
+			}
 		}
 
 		_, err := db.Exec("UPDATE users SET username = ?, discriminator = ? WHERE email = ?", username, currentUser.Profile.Discriminator, userEmail)
@@ -253,6 +270,6 @@ func settings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		http.Redirect(w, r, "/settings", http.StatusSeeOther)
+		http.Redirect(w, r, "/discussions", http.StatusSeeOther)
 	}
 }

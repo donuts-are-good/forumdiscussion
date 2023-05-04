@@ -10,7 +10,7 @@
     <ul>
         {{range .}}
         <li>
-            <a href="/discussion/{{.ID}}">{{.Title}}</a> by {{.Owner.Email}}
+            <a href="/discussion/{{.ID}}">{{.Title}}</a> by {{.Owner.Profile.Username}}
         </li>
         {{end}}
     </ul>
