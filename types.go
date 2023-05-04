@@ -1,12 +1,19 @@
 package main
 
-import "time"
-
+import (
+	"time"
+)
 type User struct {
-	ID       int `db:"id"`
-	RoleIDs  []int
-	Email    string `db:"email" json:"email,omitempty"`
-	Password string `db:"password" json:"password,omitempty"`
+	ID       int          `db:"id" json:"-"`
+	RoleIDs  []int        `json:"-"`
+	Email    string       `db:"email" json:"email,omitempty"`
+	Password string       `db:"password" json:"password,omitempty"`
+	Profile  ProfileData  `json:"profile"`
+}
+
+type ProfileData struct {
+	Username      string  `db:"username" json:"username"`
+	Discriminator int     `db:"discriminator" json:"discriminator"`
 }
 
 type Role struct {

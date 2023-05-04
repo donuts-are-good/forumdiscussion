@@ -2,16 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"log"
 )
-
-func getDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "sqlite.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return db
-}
 
 func (u *User) GetRoles(db *sql.DB) ([]Role, error) {
 	roles := []Role{}

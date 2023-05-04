@@ -2,19 +2,23 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/mail"
+	"regexp"
 
-	"github.com/gorilla/mux"
+	"sync"
+
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var users = make(map[string]*User)
+var dbPool *sync.Pool
+
 var tmpl = template.Must(template.ParseFiles(
 	"templates/index.html",
 	"templates/login.html",
@@ -22,6 +26,15 @@ var tmpl = template.Must(template.ParseFiles(
 	"templates/404.html"))
 
 func main() {
+	dbPool = &sync.Pool{
+		New: func() interface{} {
+			db, err := sql.Open("sqlite3", "file:sqlite.db?cache=shared")
+			if err != nil {
+				log.Fatal("Failed to create a new connection:", err)
+			}
+			return db
+		},
+	}
 	r := http.NewServeMux()
 	r.HandleFunc("/", index)
 	r.HandleFunc("/login", login)
@@ -30,193 +43,31 @@ func main() {
 	r.HandleFunc("/discussion/{id}", discussion)
 	r.HandleFunc("/new_discussion", newDiscussion)
 	r.HandleFunc("/new_reply", newReply)
+	r.HandleFunc("/settings", settings)
 	http.ListenAndServe(":8080", r)
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		notFoundHandler(w, r)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "index.html", nil)
+func setUserEmailCookie(w http.ResponseWriter, email string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "user_email",
+		Value:    email,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true, // Set this to true for secure cookies in production
+	})
+}
+func isValidUsername(username string) bool {
+	validUsernameRegex := `^[a-z0-9._-]+$`
+	match, _ := regexp.MatchString(validUsernameRegex, username)
+	return match
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		token := setCSRFToken(w, r)
-		tmpl.ExecuteTemplate(w, "login.html", map[string]interface{}{
-			"csrfField": template.HTML(`<input type="hidden" name="csrf_token" value="` + token + `">`),
-		})
-		return
-	}
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if err := verifyCSRFToken(r); err != nil {
-		http.Error(w, "Invalid CSRF token", http.StatusBadRequest)
-		return
-	}
-
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
-	user, ok := users[email]
-
-	if !ok {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-		return
-	}
-
-	if !checkPassword(password, user.Password) {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-		return
-	}
-
-	fmt.Fprintf(w, "Welcome, %s!", email)
-}
-
-func register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		token := setCSRFToken(w, r)
-		tmpl.ExecuteTemplate(w, "register.html", map[string]interface{}{
-			"csrfField": template.HTML(`<input type="hidden" name="csrf_token" value="` + token + `">`),
-		})
-		return
-	}
-
-	if r.Method != http.MethodPost {
-		tmpl.ExecuteTemplate(w, "register.html", nil)
-		return
-	}
-
-	if err := verifyCSRFToken(r); err != nil {
-		http.Error(w, "Invalid CSRF token", http.StatusBadRequest)
-		return
-	}
-
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
-	if !isValidEmail(email) {
-		http.Error(w, "Invalid email format", http.StatusBadRequest)
-		return
-	}
-
-	if _, exists := users[email]; exists {
-		http.Error(w, "User already exists", http.StatusBadRequest)
-		return
-	}
-
-	hashedPassword, err := hashPassword(password)
+func getUserEmailCookie(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("user_email")
 	if err != nil {
-		http.Error(w, "Error hashing password", http.StatusInternalServerError)
-		return
+		return "", err
 	}
-
-	user := &User{Email: email, Password: hashedPassword}
-	users[email] = user
-
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
-}
-
-func newDiscussion(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		tmpl := template.Must(template.ParseFiles("templates/new_discussion.html"))
-		tmpl.Execute(w, nil)
-	} else if r.Method == "POST" {
-		cookie, err := r.Cookie("user_email")
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		userEmail := cookie.Value
-
-		db := getDB()
-		defer db.Close()
-
-		title := r.FormValue("title")
-		body := r.FormValue("body")
-
-		_, err = db.Exec("INSERT INTO discussions (user_email, title, body) VALUES (?, ?, ?)", userEmail, title, body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(w, r, "/discussions", http.StatusSeeOther)
-	}
-}
-
-func newReply(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		tmpl := template.Must(template.ParseFiles("templates/new_reply.html"))
-		tmpl.Execute(w, nil)
-	} else if r.Method == "POST" {
-		cookie, err := r.Cookie("user_email")
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		userEmail := cookie.Value
-
-		db := getDB()
-		defer db.Close()
-
-		discussionID := r.FormValue("discussion_id")
-		parentID := r.FormValue("parent_id")
-		body := r.FormValue("body")
-
-		if parentID == "" {
-			_, err = db.Exec("INSERT INTO replies (discussion_id, user_email, body) VALUES (?, ?, ?)", discussionID, userEmail, body)
-		} else {
-			_, err = db.Exec("INSERT INTO replies (discussion_id, parent_id, user_email, body) VALUES (?, ?, ?, ?)", discussionID, parentID, userEmail, body)
-		}
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(w, r, "/discussion/"+discussionID, http.StatusSeeOther)
-	}
-}
-
-func discussions(w http.ResponseWriter, r *http.Request) {
-	db := getDB()
-	defer db.Close()
-
-	discussions, err := GetAllDiscussions(db)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	tmpl := template.Must(template.ParseFiles("templates/discussions.html"))
-	tmpl.Execute(w, discussions)
-}
-
-func discussion(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
-		http.Error(w, "Missing discussion ID", http.StatusBadRequest)
-		return
-	}
-
-	db := getDB()
-	defer db.Close()
-
-	discussion, err := GetDiscussionByID(db, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	tmpl := template.Must(template.ParseFiles("templates/discussion.html"))
-	tmpl.Execute(w, discussion)
+	return cookie.Value, nil
 }
 
 func hashPassword(password string) (string, error) {
@@ -269,7 +120,4 @@ func verifyCSRFToken(r *http.Request) error {
 	return nil
 }
 
-func notFoundHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	tmpl.ExecuteTemplate(w, "404.html", nil)
-}
+
