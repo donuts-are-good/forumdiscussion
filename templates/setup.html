@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Setup Wizard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <h1>Setup Wizard</h1>
+    <form method="POST" action="/setup">
+        <label for="forum_name">Forum Name:</label>
+        <input type="text" id="forum_name" name="forum_name" required>
+        <br>
+        <label for="forum_description">Forum Description:</label>
+        <textarea id="forum_description" name="forum_description" required></textarea>
+        <br>
+        <label for="forum_contact_email">Forum Contact Email:</label>
+        <input type="email" id="forum_contact_email" name="forum_contact_email" required>
+        <br>
+        <label for="forum_url">Forum URL:</label>
+        <input type="text" id="forum_url" name="forum_url" required>
+        <br>
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>
