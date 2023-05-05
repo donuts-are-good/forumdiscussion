@@ -376,7 +376,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		forumContactEmail := r.FormValue("forum_contact_email")
 		forumURL := r.FormValue("forum_url")
 
-		// Save configuration values in the database
 		_, err := db.Exec(`
 					INSERT OR REPLACE INTO config (key, value)
 					VALUES ('forum_name', ?), ('forum_description', ?), ('forum_contact_email', ?), ('forum_url', ?), ('setup_completed', '1')
@@ -386,7 +385,6 @@ func setup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Redirect to home page after setup
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}

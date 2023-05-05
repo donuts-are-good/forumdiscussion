@@ -1,4 +1,4 @@
-module github.com/donuts-are-good/forumdiscussion
+module github.com/donuts-are-good/forumbtw
 
 go 1.20
 

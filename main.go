@@ -52,6 +52,9 @@ func main() {
 	r.HandleFunc("/new_reply/{discussionID}", newReply)
 	r.HandleFunc("/settings", settings)
 	r.HandleFunc("/setup", setup)
+
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/",
+		http.FileServer(http.Dir("templates/static/"))))
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
 	http.ListenAndServe(":"+port, r)
