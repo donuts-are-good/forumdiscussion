@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS users (
 	email TEXT NOT NULL UNIQUE,
 	password TEXT NOT NULL,
 	username TEXT,
-	discriminator INTEGER
+	discriminator INTEGER,
+	hex TEXT
 );
 
 

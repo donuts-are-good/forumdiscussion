@@ -25,12 +25,14 @@ type Role struct {
 }
 
 type Discussion struct {
-	ID        int       `db:"id" json:"id,omitempty"`
-	Title     string    `db:"title" json:"title,omitempty"`
-	Body      string    `db:"body" json:"body,omitempty"`
-	Owner     User      `json:"owner,omitempty"`
-	CreatedAt time.Time `db:"created_at" json:"created_at,omitempty"`
-	Replies   []*Reply  `json:"replies,omitempty"`
+	ID          int       `db:"id" json:"id,omitempty"`
+	Title       string    `db:"title" json:"title,omitempty"`
+	Body        string    `db:"body" json:"body,omitempty"`
+	Owner       User      `json:"owner,omitempty"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at,omitempty"`
+	Replies     []*Reply  `json:"replies,omitempty"`
+	NumReplies  int       `json:"num_replies"`
+	LatestReply time.Time `json:"latest_reply"`
 }
 
 type Reply struct {

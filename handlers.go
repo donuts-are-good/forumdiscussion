@@ -224,9 +224,33 @@ func discussions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userEmail, err := getUserEmailCookie(r)
+	isLoggedIn := err == nil
+
+	var username string
+	if isLoggedIn {
+		user, err := GetUserByEmail(db, userEmail)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		username = user.Profile.Username
+	}
+
+	data := struct {
+		Discussions []Discussion
+		IsLoggedIn  bool
+		Username    string
+	}{
+		discussions,
+		isLoggedIn,
+		username,
+	}
+
 	tmpl := template.Must(template.ParseFiles("templates/discussions.html"))
-	tmpl.Execute(w, discussions)
+	tmpl.Execute(w, data)
 }
+
 func discussion(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
@@ -260,7 +284,16 @@ func discussion(w http.ResponseWriter, r *http.Request) {
 		id,
 	}
 
-	tmpl := template.Must(template.ParseFiles("templates/discussion.html"))
+	tmplFuncs := template.FuncMap{
+		"hexSlice": func(hex string, start, end int) string {
+			if start >= 0 && start < len(hex) && end >= 0 && end <= len(hex) && start < end {
+				return hex[start:end]
+			}
+			return ""
+		},
+	}
+
+	tmpl := template.Must(template.New("discussion.html").Funcs(tmplFuncs).ParseFiles("templates/discussion.html"))
 	tmpl.Execute(w, data)
 }
 
@@ -303,7 +336,7 @@ func settings(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if currentUser.Profile.Discriminator == 0 {
-			currentUser.Profile.Discriminator = rand.Intn(9999) // Generate a random number between 0 and 9999
+			currentUser.Profile.Discriminator = rand.Intn(9999)
 			if currentUser.Profile.Discriminator < 1000 {
 				currentUser.Profile.Discriminator += 1000
 			}

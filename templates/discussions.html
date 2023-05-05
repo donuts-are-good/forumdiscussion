@@ -6,14 +6,37 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
 </head>
 <body>
+    <nav>
+        <a href="/">Home</a>&emsp;
+        <a href="/discussions">Discussions</a>&emsp;
+        <a href="/settings">Settings</a>&emsp;
+        <a href="/register">Register</a>&emsp;
+        <a href="/login">Login</a>&emsp;
+      </nav>
     <h1>Discussions</h1>
     <a href="/new_discussion">Create a new discussion</a>
-    <ul>
-        {{range .}}
-        <li>
-            <a href="/discussion/{{.ID}}">{{.Title}}</a> by {{.Owner.Profile.Username}}
-        </li>
-        {{end}}
-    </ul>
+    <br>
+    <br>
+    <br>
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Replies</th>
+                <th>Latest Reply</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Discussions}}
+            <tr>
+                <td><a href="/discussion/{{.ID}}">{{.Title}}</a></td>
+                <td>{{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}}</td>
+                <td>{{.NumReplies}}</td>
+                <td>{{.LatestReply.Format "2006-01-02 15:04:05"}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
 </body>
 </html>

@@ -2,7 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"log"
+	"time"
 )
 
 func (u *User) GetRoles(db *sql.DB) ([]Role, error) {
@@ -62,10 +62,13 @@ func GetUserRoleIDs(db *sql.DB, userID int) ([]int, error) {
 }
 
 func GetAllDiscussions(db *sql.DB) ([]Discussion, error) {
-	rows, err := db.Query(`SELECT d.id, u.username, u.discriminator, d.title, d.body, d.created_at
-		FROM discussions d
-		INNER JOIN users u ON d.user_id = u.id
-		ORDER BY d.created_at DESC`)
+	rows, err := db.Query(`SELECT d.id, u.username, u.discriminator, d.title, d.body, d.created_at,
+                                  COUNT(r.id) as num_replies, COALESCE(MAX(r.created_at), d.created_at) as latest_reply
+                           FROM discussions d
+                           INNER JOIN users u ON d.user_id = u.id
+                           LEFT JOIN replies r ON r.discussion_id = d.id
+                           GROUP BY d.id, u.username, u.discriminator, d.title, d.body, d.created_at
+                           ORDER BY latest_reply DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +77,17 @@ func GetAllDiscussions(db *sql.DB) ([]Discussion, error) {
 	var discussions []Discussion
 	for rows.Next() {
 		var discussion Discussion
-		if err := rows.Scan(&discussion.ID, &discussion.Owner.Profile.Username, &discussion.Owner.Profile.Discriminator, &discussion.Title, &discussion.Body, &discussion.CreatedAt); err != nil {
+		var latestReplyStr string
+		if err := rows.Scan(&discussion.ID, &discussion.Owner.Profile.Username, &discussion.Owner.Profile.Discriminator, &discussion.Title, &discussion.Body, &discussion.CreatedAt, &discussion.NumReplies, &latestReplyStr); err != nil {
 			return nil, err
 		}
+
+		// Parse the string into a time.Time variable
+		discussion.LatestReply, err = time.Parse("2006-01-02 15:04:05", latestReplyStr)
+		if err != nil {
+			return nil, err
+		}
+
 		discussions = append(discussions, discussion)
 	}
 	return discussions, nil
@@ -103,7 +114,6 @@ func GetRepliesByDiscussionID(db *sql.DB, discussionID string) ([]*Reply, error)
 
 func GetDiscussionByID(db *sql.DB, id string) (Discussion, error) {
 	var discussion Discussion
-	log.Println("Getting discussion ID: ", id)
 	err := db.QueryRow(`SELECT d.id, u.email, u.username, u.discriminator, d.title, d.body, d.created_at FROM discussions d INNER JOIN users u ON d.user_id = u.id WHERE d.id = ?`, id).Scan(&discussion.ID, &discussion.Owner.Email, &discussion.Owner.Profile.Username, &discussion.Owner.Profile.Discriminator, &discussion.Title, &discussion.Body, &discussion.CreatedAt)
 	if err != nil {
 		return Discussion{}, err
