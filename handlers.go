@@ -11,6 +11,20 @@ import (
 )
 
 func index(w http.ResponseWriter, r *http.Request) {
+	db := dbPool.Get().(*sql.DB)
+	defer dbPool.Put(db)
+
+	isSetupCompleted, err := IsSetupCompleted(db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if !isSetupCompleted {
+		http.Redirect(w, r, "/setup", http.StatusSeeOther)
+		return
+	}
+
 	if r.URL.Path != "/" {
 		notFoundHandler(w, r)
 		return
@@ -350,4 +364,33 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 		http.Redirect(w, r, "/discussions", http.StatusSeeOther)
 	}
+}
+
+func setup(w http.ResponseWriter, r *http.Request) {
+	db := dbPool.Get().(*sql.DB)
+	defer dbPool.Put(db)
+
+	if r.Method == "POST" {
+		forumName := r.FormValue("forum_name")
+		forumDescription := r.FormValue("forum_description")
+		forumContactEmail := r.FormValue("forum_contact_email")
+		forumURL := r.FormValue("forum_url")
+
+		// Save configuration values in the database
+		_, err := db.Exec(`
+					INSERT OR REPLACE INTO config (key, value)
+					VALUES ('forum_name', ?), ('forum_description', ?), ('forum_contact_email', ?), ('forum_url', ?), ('setup_completed', '1')
+			`, forumName, forumDescription, forumContactEmail, forumURL)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Redirect to home page after setup
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFiles("templates/setup.html"))
+	tmpl.Execute(w, nil)
 }

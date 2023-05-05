@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
+	"flag"
 	"html/template"
 	"log"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 )
 
 var dbPool *sync.Pool
+var port string
 
 var tmpl = template.Must(template.ParseFiles(
 	"templates/index.html",
@@ -27,6 +29,10 @@ var tmpl = template.Must(template.ParseFiles(
 	"templates/404.html"))
 
 func main() {
+
+	flag.StringVar(&port, "port", "8080", "Port on which the server listens")
+	flag.Parse()
+
 	dbPool = &sync.Pool{
 		New: func() interface{} {
 			db, err := sql.Open("sqlite3", "file:sqlite.db?cache=shared")
@@ -45,9 +51,10 @@ func main() {
 	r.HandleFunc("/new_discussion", newDiscussion)
 	r.HandleFunc("/new_reply/{discussionID}", newReply)
 	r.HandleFunc("/settings", settings)
+	r.HandleFunc("/setup", setup)
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":"+port, r)
 }
 
 func BuildReplyTree(replies []*Reply) []*Reply {
