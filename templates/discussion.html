@@ -1,7 +1,7 @@
 <!-- templates/discussion.html -->
 {{define "reply"}}
 <li>
-    <p><b><img src="/static/avatars/{{.Owner.Profile.Avatar}}" height="18px" width="18px" />&nbsp;{{.Owner.Profile.Username}}</b>#{{.Owner.Profile.Discriminator}}<small> at {{.CreatedAt.Format "2006-01-02 15:04:05 UTC"}}</small></p>
+    <p style="display: inline-flex;align-items: center; margin-bottom: 0px; font-weight: bolder;" title='{{.CreatedAt.Format "2006-01-02 15:04:05 UTC"}}'><img src="/static/avatars/{{.Owner.Profile.Avatar}}" height="18px" width="18px" />&nbsp;{{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}}</p>
     <p>{{.Body}}</p>
     <p><a href="/new_reply/{{$.DiscussionID}}?parent_id={{.ID}}">Reply to this comment</a></p>
     {{if .Children}}
@@ -29,8 +29,8 @@
         <a href="/register" style="float:inline-end">Register&emsp;</a>
         <a href="/login"  style="float:inline-end">Login&emsp;</a>
       </nav>
-      <div style="display: inline-flex;align-items: center;">
-        <h1>
+      <div >
+        <h1 style="display: inline-flex;align-items: center;">
             <img src="/static/avatars/{{.Discussion.Owner.Profile.Avatar}}" height="48px" width="48px" />&emsp;{{.Discussion.Title}}</h1>
     </div>
     
