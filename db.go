@@ -97,10 +97,19 @@ func GetRoleByID(db *sql.DB, roleID int) (Role, error) {
 
 func GetUserByEmail(db *sql.DB, email string) (User, error) {
 	var user User
-	err := db.QueryRow("SELECT * FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Password, &user.Profile.Username, &user.Profile.Discriminator, &user.Profile.Avatar)
+	var discriminator int
+	err := db.QueryRow("SELECT id, email, password, username, discriminator, avatar FROM users WHERE email = ?", email).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Password,
+		&user.Profile.Username,
+		&discriminator,
+		&user.Profile.Avatar,
+	)
 	if err != nil {
 		return User{}, err
 	}
+	user.Profile.Discriminator = discriminator
 
 	roleIDs, err := GetUserRoleIDs(db, user.ID)
 	if err != nil {

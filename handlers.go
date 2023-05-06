@@ -326,16 +326,18 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	defer dbPool.Put(db)
 
 	var currentUser User
+	var discriminator int
 	err = db.QueryRow("SELECT id, email, username, discriminator, avatar FROM users WHERE email = ?", userEmail).Scan(
 		&currentUser.ID,
 		&currentUser.Email,
 		&currentUser.Profile.Username,
-		&currentUser.Profile.Discriminator,
+		&discriminator,
 		&currentUser.Profile.Avatar,
 	)
 	if err != nil {
 		log.Println("error adding user settings: ", err)
 	}
+	currentUser.Profile.Discriminator = discriminator
 
 	if r.Method == "GET" {
 		tmpl := template.Must(template.ParseFiles("templates/settings.html"))

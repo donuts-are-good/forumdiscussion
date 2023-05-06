@@ -16,7 +16,7 @@
     <h1>Settings</h1>
     <form method="POST" action="/settings" enctype="multipart/form-data">
 
-        <img src="static/avatars/{{ .Profile.Avatar }}" />
+        <img height=256px width=256px src="static/avatars/{{ .Profile.Avatar }}" />
         <h2>{{ .Profile.Username }}#{{printf "%04d" .Profile.Discriminator}}</h2>
 
         <label for="avatar">Avatar:</label>
