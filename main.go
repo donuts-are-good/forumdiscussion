@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -42,14 +43,17 @@ func main() {
 
 	dbPool = &sync.Pool{
 		New: func() interface{} {
-			db, err := sqlx.Open("sqlite3", "file:sqlite.db?cache=shared")
+			db, err := sql.Open("sqlite3", "file:sqlite.db?cache=shared")
 			if err != nil {
 				log.Fatal("Failed to create a new connection:", err)
 			}
-			err = ensureTablesPresent(db)
+
+			sqlxDB := sqlx.NewDb(db, "sqlite3")
+			err = ensureTablesPresent(sqlxDB)
 			if err != nil {
 				log.Fatal("Failed to ensure tables are present:", err)
 			}
+
 			return db
 		},
 	}
