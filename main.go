@@ -38,6 +38,19 @@ var tmpl = template.Must(template.ParseFiles(
 	"templates/404.html"))
 
 func main() {
+
+	db, err := sqlx.Open("sqlite3", "file:sqlite.db?cache=shared")
+	if err != nil {
+		log.Fatal("Failed to create a new connection:", err)
+	}
+
+	err = ensureTablesPresent(db)
+	if err != nil {
+		log.Fatal("Failed to ensure tables are present:", err)
+	}
+
+	db.Close()
+
 	flag.StringVar(&port, "port", "8080", "Port on which the server listens")
 	flag.Parse()
 
@@ -47,13 +60,6 @@ func main() {
 			if err != nil {
 				log.Fatal("Failed to create a new connection:", err)
 			}
-
-			sqlxDB := sqlx.NewDb(db, "sqlite3")
-			err = ensureTablesPresent(sqlxDB)
-			if err != nil {
-				log.Fatal("Failed to ensure tables are present:", err)
-			}
-
 			return db
 		},
 	}
