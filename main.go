@@ -6,16 +6,24 @@ import (
 	"encoding/base64"
 	"errors"
 	"flag"
+	"fmt"
 	"html/template"
+	"image"
+	"image/jpeg"
+	"image/png"
+	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/mail"
 	"regexp"
+	"strings"
 
 	"sync"
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/nfnt/resize"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -148,4 +156,39 @@ func verifyCSRFToken(r *http.Request) error {
 		return errors.New("invalid CSRF token")
 	}
 	return nil
+}
+
+func isAllowedImageType(fileHeader *multipart.FileHeader) bool {
+	allowedMimeTypes := []string{
+		"image/jpeg",
+		"image/png",
+		"image/gif",
+	}
+
+	for _, mimeType := range allowedMimeTypes {
+		if fileHeader.Header.Get("Content-Type") == mimeType {
+			return true
+		}
+	}
+	return false
+}
+
+func resizeImage(src io.Reader, dst io.Writer, maxSize int, maxDimensions int) error {
+	img, format, err := image.Decode(src)
+	if err != nil {
+		return err
+	}
+
+	if img.Bounds().Dx() > maxDimensions || img.Bounds().Dy() > maxDimensions {
+		img = resize.Resize(uint(maxDimensions), 0, img, resize.Lanczos3)
+	}
+
+	switch strings.ToLower(format) {
+	case "jpeg", "jpg":
+		return jpeg.Encode(dst, img, &jpeg.Options{Quality: 75})
+	case "png":
+		return png.Encode(dst, img)
+	default:
+		return fmt.Errorf("unsupported image format: %s", format)
+	}
 }

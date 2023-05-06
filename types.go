@@ -15,6 +15,7 @@ type User struct {
 type ProfileData struct {
 	Username      string `db:"username" json:"username"`
 	Discriminator int    `db:"discriminator" json:"discriminator"`
+	Avatar        string `db:"avatar" json:"avatar,omitempty"`
 }
 
 type Role struct {

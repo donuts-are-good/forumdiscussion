@@ -171,6 +171,12 @@ button {
   }
 }
 
+
+li {
+  list-style: none;
+}
+
+
 input {
   transition:
     background-color 0.1s linear,

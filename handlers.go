@@ -2,10 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"html/template"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 )
@@ -166,9 +169,7 @@ func newDiscussion(w http.ResponseWriter, r *http.Request) {
 func newReply(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	discussionID := vars["discussionID"]
-	log.Println("discussionID: ", discussionID)
 	parentID := r.URL.Query().Get("parent_id")
-	log.Println("parentID: ", parentID)
 
 	if r.Method == "GET" {
 		tmpl := template.Must(template.ParseFiles("templates/new_reply.html"))
@@ -180,17 +181,13 @@ func newReply(w http.ResponseWriter, r *http.Request) {
 		if parentID != "" {
 			db := dbPool.Get().(*sql.DB)
 			defer dbPool.Put(db)
-			log.Println("discussionID: ", discussionID)
-			log.Println("parentID2: ", parentID)
 
 			parentReply, err := GetReplyByID(db, parentID)
-			log.Println("parentReply: ", parentReply)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			data["ParentReply"] = parentReply
-			log.Println("parentReply2: ", parentReply)
 
 		}
 
@@ -208,10 +205,6 @@ func newReply(w http.ResponseWriter, r *http.Request) {
 		discussionID := r.FormValue("discussion_id")
 		parentID := r.FormValue("parent_id")
 		body := r.FormValue("body")
-
-		log.Println("discussion_id: ", discussionID)
-		log.Println("parent_id: ", parentID)
-		log.Println("body: ", body)
 
 		if parentID == "" {
 			_, err = db.Exec("INSERT INTO replies (discussion_id, user_email, body) VALUES (?, ?, ?)", discussionID, userEmail, body)
@@ -242,6 +235,7 @@ func discussions(w http.ResponseWriter, r *http.Request) {
 	isLoggedIn := err == nil
 
 	var username string
+	var avatar string
 	if isLoggedIn {
 		user, err := GetUserByEmail(db, userEmail)
 		if err != nil {
@@ -249,16 +243,18 @@ func discussions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		username = user.Profile.Username
+		avatar = user.Profile.Avatar
 	}
-
 	data := struct {
 		Discussions []Discussion
 		IsLoggedIn  bool
 		Username    string
+		Avatar      string
 	}{
 		discussions,
 		isLoggedIn,
 		username,
+		avatar,
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/discussions.html"))
@@ -290,12 +286,15 @@ func discussion(w http.ResponseWriter, r *http.Request) {
 
 	discussion.Replies = BuildReplyTree(replies)
 
+	var avatar string
 	data := struct {
 		Discussion   Discussion
 		DiscussionID string
+		Avatar       string
 	}{
 		discussion,
 		id,
+		avatar,
 	}
 
 	tmplFuncs := template.FuncMap{
@@ -327,11 +326,12 @@ func settings(w http.ResponseWriter, r *http.Request) {
 	defer dbPool.Put(db)
 
 	var currentUser User
-	err = db.QueryRow("SELECT id, email, username, discriminator FROM users WHERE email = ?", userEmail).Scan(
+	err = db.QueryRow("SELECT id, email, username, discriminator, avatar FROM users WHERE email = ?", userEmail).Scan(
 		&currentUser.ID,
 		&currentUser.Email,
 		&currentUser.Profile.Username,
 		&currentUser.Profile.Discriminator,
+		&currentUser.Profile.Avatar,
 	)
 	if err != nil {
 		log.Println("error adding user settings: ", err)
@@ -360,6 +360,37 @@ func settings(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		r.ParseMultipartForm(10 << 20)
+		file, fileHeader, err := r.FormFile("avatar")
+		if err == nil {
+			defer file.Close()
+			if !isAllowedImageType(fileHeader) {
+				http.Error(w, "Unsupported image format", http.StatusBadRequest)
+				return
+			}
+
+			avatarFilename := fmt.Sprintf("%d_%s_%04d%s", currentUser.ID, currentUser.Profile.Username, currentUser.Profile.Discriminator, filepath.Ext(fileHeader.Filename))
+			currentUser.Profile.Avatar = avatarFilename
+
+			f, err := os.OpenFile("templates/static/avatars/"+avatarFilename, os.O_WRONLY|os.O_CREATE, 0666)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer f.Close()
+			// io.Copy(f, file)
+			if err := resizeImage(file, f, 1<<20, 512); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			_, err = db.Exec("UPDATE users SET avatar = ? WHERE email = ?", avatarFilename, userEmail)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		http.Redirect(w, r, "/discussions", http.StatusSeeOther)

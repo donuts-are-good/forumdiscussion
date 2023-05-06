@@ -2,11 +2,11 @@
 <html>
 <head>
     <title>Settings</title>
+	<link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/static/water.css">
 </head>
 <body>
     <nav>
-        <img src="static/monkfish.svg" width=32px height=32px />
         <a href="/">Home</a>&emsp;
         <a href="/discussions">Discussions</a>&emsp;
         <a href="/settings">Settings</a>&emsp;
@@ -14,12 +14,16 @@
         <a href="/login"  style="float:inline-end">Login&emsp;</a>
       </nav>
     <h1>Settings</h1>
-    <form method="POST" action="/settings">
+    <form method="POST" action="/settings" enctype="multipart/form-data">
 
+        <img src="static/avatars/{{ .Profile.Avatar }}" />
         <h2>{{ .Profile.Username }}#{{printf "%04d" .Profile.Discriminator}}</h2>
+
+        <label for="avatar">Avatar:</label>
+        <input type="file" id="avatar" name="avatar" accept="image/*">
+
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" value="{{.Profile.Username}}" required>
-        <br>
         {{if .Profile.Discriminator}}
         <p>Discriminator: #{{printf "%04d" .Profile.Discriminator}}</p>
         {{end}}

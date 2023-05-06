@@ -3,11 +3,11 @@
 <html>
 <head>
     <title>Discussions</title>
+	<link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/static/water.css">
 </head>
 <body>
     <nav>
-        <img src="static/monkfish.svg" width=32px height=32px />
         <a href="/">Home</a>&emsp;
         <a href="/discussions">Discussions</a>&emsp;
         <a href="/settings">Settings</a>&emsp;
@@ -22,19 +22,22 @@
     <table>
         <thead>
             <tr>
-                <th>Title</th>
+                <th colspan="3">Title</th>
                 <th>Author</th>
-                <th>Replies</th>
-                <th>Latest Reply</th>
+                <th><center>Replies</center></th>
+                <th colspan="2">Latest Reply</th>
             </tr>
         </thead>
         <tbody>
             {{range .Discussions}}
             <tr>
-                <td><a href="/discussion/{{.ID}}">{{.Title}}</a></td>
-                <td>{{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}}</td>
-                <td>{{.NumReplies}}</td>
-                <td>{{.LatestReply.Format "2006-01-02 15:04:05"}}</td>
+                <td colspan="3"><a href="/discussion/{{.ID}}">{{.Title}}</a></td>
+                <td>
+                    <img src="/static/avatars/{{.Owner.Profile.Avatar}}" height="18px" width="18px" />&emsp;{{.Owner.Profile.Username}}#{{.Owner.Profile.Discriminator}}</td>
+                <td>
+                    <center>{{.NumReplies}}</center>
+                </td>
+                <td colspan="2">{{.LatestReply.Format "2006-01-02 15:04:05"}}</td>
             </tr>
             {{end}}
         </tbody>

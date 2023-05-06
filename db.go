@@ -28,7 +28,7 @@ func GetRoleByID(db *sql.DB, roleID int) (Role, error) {
 
 func GetUserByEmail(db *sql.DB, email string) (User, error) {
 	var user User
-	err := db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Password)
+	err := db.QueryRow("SELECT * FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Password, &user.Profile.Username, &user.Profile.Discriminator, &user.Profile.Avatar)
 	if err != nil {
 		return User{}, err
 	}
@@ -60,14 +60,13 @@ func GetUserRoleIDs(db *sql.DB, userID int) ([]int, error) {
 
 	return roleIDs, nil
 }
-
 func GetAllDiscussions(db *sql.DB) ([]Discussion, error) {
-	rows, err := db.Query(`SELECT d.id, u.username, u.discriminator, d.title, d.body, d.created_at,
+	rows, err := db.Query(`SELECT d.id, u.username, u.discriminator, u.avatar, d.title, d.body, d.created_at,
                                   COUNT(r.id) as num_replies, COALESCE(MAX(r.created_at), d.created_at) as latest_reply
                            FROM discussions d
                            INNER JOIN users u ON d.user_id = u.id
                            LEFT JOIN replies r ON r.discussion_id = d.id
-                           GROUP BY d.id, u.username, u.discriminator, d.title, d.body, d.created_at
+                           GROUP BY d.id, u.username, u.discriminator, u.avatar, d.title, d.body, d.created_at
                            ORDER BY latest_reply DESC`)
 	if err != nil {
 		return nil, err
@@ -78,11 +77,10 @@ func GetAllDiscussions(db *sql.DB) ([]Discussion, error) {
 	for rows.Next() {
 		var discussion Discussion
 		var latestReplyStr string
-		if err := rows.Scan(&discussion.ID, &discussion.Owner.Profile.Username, &discussion.Owner.Profile.Discriminator, &discussion.Title, &discussion.Body, &discussion.CreatedAt, &discussion.NumReplies, &latestReplyStr); err != nil {
+		if err := rows.Scan(&discussion.ID, &discussion.Owner.Profile.Username, &discussion.Owner.Profile.Discriminator, &discussion.Owner.Profile.Avatar, &discussion.Title, &discussion.Body, &discussion.CreatedAt, &discussion.NumReplies, &latestReplyStr); err != nil {
 			return nil, err
 		}
 
-		// Parse the string into a time.Time variable
 		discussion.LatestReply, err = time.Parse("2006-01-02 15:04:05", latestReplyStr)
 		if err != nil {
 			return nil, err
@@ -90,11 +88,12 @@ func GetAllDiscussions(db *sql.DB) ([]Discussion, error) {
 
 		discussions = append(discussions, discussion)
 	}
+
 	return discussions, nil
 }
 
 func GetRepliesByDiscussionID(db *sql.DB, discussionID string) ([]*Reply, error) {
-	rows, err := db.Query(`SELECT r.id, r.discussion_id, r.parent_id, u.email, u.username, u.discriminator, r.body, r.created_at FROM replies r INNER JOIN users u ON r.user_email = u.email WHERE r.discussion_id = ?`, discussionID)
+	rows, err := db.Query(`SELECT r.id, r.discussion_id, r.parent_id, u.email, u.username, u.discriminator, u.avatar, r.body, r.created_at FROM replies r INNER JOIN users u ON r.user_email = u.email WHERE r.discussion_id = ?`, discussionID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +102,7 @@ func GetRepliesByDiscussionID(db *sql.DB, discussionID string) ([]*Reply, error)
 	replies := []*Reply{}
 	for rows.Next() {
 		var reply Reply
-		err := rows.Scan(&reply.ID, &reply.DiscussionID, &reply.ParentID, &reply.Owner.Email, &reply.Owner.Profile.Username, &reply.Owner.Profile.Discriminator, &reply.Body, &reply.CreatedAt)
+		err := rows.Scan(&reply.ID, &reply.DiscussionID, &reply.ParentID, &reply.Owner.Email, &reply.Owner.Profile.Username, &reply.Owner.Profile.Discriminator, &reply.Owner.Profile.Avatar, &reply.Body, &reply.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +113,7 @@ func GetRepliesByDiscussionID(db *sql.DB, discussionID string) ([]*Reply, error)
 
 func GetDiscussionByID(db *sql.DB, id string) (Discussion, error) {
 	var discussion Discussion
-	err := db.QueryRow(`SELECT d.id, u.email, u.username, u.discriminator, d.title, d.body, d.created_at FROM discussions d INNER JOIN users u ON d.user_id = u.id WHERE d.id = ?`, id).Scan(&discussion.ID, &discussion.Owner.Email, &discussion.Owner.Profile.Username, &discussion.Owner.Profile.Discriminator, &discussion.Title, &discussion.Body, &discussion.CreatedAt)
+	err := db.QueryRow(`SELECT d.id, u.email, u.username, u.discriminator, u.avatar, d.title, d.body, d.created_at FROM discussions d INNER JOIN users u ON d.user_id = u.id WHERE d.id = ?`, id).Scan(&discussion.ID, &discussion.Owner.Email, &discussion.Owner.Profile.Username, &discussion.Owner.Profile.Discriminator, &discussion.Owner.Profile.Avatar, &discussion.Title, &discussion.Body, &discussion.CreatedAt)
 	if err != nil {
 		return Discussion{}, err
 	}

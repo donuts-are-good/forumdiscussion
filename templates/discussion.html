@@ -1,10 +1,11 @@
 <!-- templates/discussion.html -->
 {{define "reply"}}
 <li>
-    <p>{{.Body}} - by <b>{{.Owner.Profile.Username}}</b>#{{.Owner.Profile.Discriminator}} at {{.CreatedAt}}</p>
+    <p><b><img src="/static/avatars/{{.Owner.Profile.Avatar}}" height="18px" width="18px" />&nbsp;{{.Owner.Profile.Username}}</b>#{{.Owner.Profile.Discriminator}}<small> at {{.CreatedAt.Format "2006-01-02 15:04:05 UTC"}}</small></p>
+    <p>{{.Body}}</p>
     <p><a href="/new_reply/{{$.DiscussionID}}?parent_id={{.ID}}">Reply to this comment</a></p>
     {{if .Children}}
-    <ul>
+    <ul style="border-left: 1px solid #0076d111">
         {{range .Children}}
             {{template "reply" .}}
         {{end}}
@@ -17,19 +18,23 @@
 <html>
 <head>
     <title>Discussion</title>
+	<link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/static/water.css">
 </head>
 <body>
     <nav>
-        <img src="static/monkfish.svg" width=32px height=32px />
         <a href="/">Home</a>&emsp;
         <a href="/discussions">Discussions</a>&emsp;
         <a href="/settings">Settings</a>&emsp;
         <a href="/register" style="float:inline-end">Register&emsp;</a>
         <a href="/login"  style="float:inline-end">Login&emsp;</a>
       </nav>
-    <h1>{{.Discussion.Title}}</h1>
-    <p><b>{{.Discussion.Owner.Profile.Username}}</b>#{{.Discussion.Owner.Profile.Discriminator}} at {{.Discussion.CreatedAt}}</p>
+      <div style="display: inline-flex;align-items: center;">
+        <h1>
+            <img src="/static/avatars/{{.Discussion.Owner.Profile.Avatar}}" height="48px" width="48px" />&emsp;{{.Discussion.Title}}</h1>
+    </div>
+    
+    <p><b>{{.Discussion.Owner.Profile.Username}}</b>#{{.Discussion.Owner.Profile.Discriminator}} at {{.Discussion.CreatedAt.Format "2006-01-02 15:04:05 UTC"}}</p>
     <p>{{.Discussion.Body}}</p>
     <p><a href="/new_reply/{{.DiscussionID}}">Reply to the discussion</a></p>
     <h2>Replies</h2>
