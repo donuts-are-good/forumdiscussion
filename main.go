@@ -100,14 +100,17 @@ func BuildReplyTree(replies []*Reply) []*Reply {
 }
 
 func setUserEmailCookie(w http.ResponseWriter, email string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "user_email",
+	cookie := &http.Cookie{
+		Name:     "userEmail",
 		Value:    email,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, // Set this to true for secure cookies in production
-	})
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	http.SetCookie(w, cookie)
 }
+
 func isValidUsername(username string) bool {
 	validUsernameRegex := `^[a-z0-9._-]+$`
 	match, _ := regexp.MatchString(validUsernameRegex, username)
@@ -115,8 +118,9 @@ func isValidUsername(username string) bool {
 }
 
 func getUserEmailCookie(r *http.Request) (string, error) {
-	cookie, err := r.Cookie("user_email")
+	cookie, err := r.Cookie("userEmail")
 	if err != nil {
+		log.Println("getUserEmailCookie error: ", err)
 		return "", err
 	}
 	return cookie.Value, nil
