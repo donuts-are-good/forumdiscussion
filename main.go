@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -22,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/nfnt/resize"
 	"golang.org/x/crypto/bcrypt"
@@ -37,19 +37,23 @@ var tmpl = template.Must(template.ParseFiles(
 	"templates/404.html"))
 
 func main() {
-
 	flag.StringVar(&port, "port", "8080", "Port on which the server listens")
 	flag.Parse()
 
 	dbPool = &sync.Pool{
 		New: func() interface{} {
-			db, err := sql.Open("sqlite3", "file:sqlite.db?cache=shared")
+			db, err := sqlx.Open("sqlite3", "file:sqlite.db?cache=shared")
 			if err != nil {
 				log.Fatal("Failed to create a new connection:", err)
+			}
+			err = ensureTablesPresent(db)
+			if err != nil {
+				log.Fatal("Failed to ensure tables are present:", err)
 			}
 			return db
 		},
 	}
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", index)
 	r.HandleFunc("/login", login)
