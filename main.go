@@ -18,7 +18,6 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
-
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -79,6 +78,7 @@ func main() {
 		http.FileServer(http.Dir("templates/static/"))))
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
+	fmt.Println("It's alive!")
 	http.ListenAndServe(":"+port, r)
 }
 
@@ -118,7 +118,7 @@ func isValidUsername(username string) bool {
 }
 
 func getUserEmailCookie(r *http.Request) (string, error) {
-	cookie, err := r.Cookie("userEmail")
+	cookie, err := r.Cookie("csrf_token")
 	if err != nil {
 		log.Println("getUserEmailCookie error: ", err)
 		return "", err
