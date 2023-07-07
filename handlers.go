@@ -327,6 +327,7 @@ func settings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("userEmail:", userEmail)
 	db := dbPool.Get().(*sql.DB)
 	defer dbPool.Put(db)
 
