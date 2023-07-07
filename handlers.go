@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -123,7 +124,11 @@ func register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = db.Exec("INSERT INTO users (email, password, username) VALUES (?, ?, ?)", email, hashedPassword, "")
+	newGuyMugshot := "default" + strconv.Itoa(rand.Intn(9)) + ".png"
+
+	newGuySerial := rand.Intn(9999)
+
+	_, err = db.Exec("INSERT INTO users (email, password, avatar, discriminator, username) VALUES (?, ?, ?, ?, ?)", email, hashedPassword, newGuyMugshot, newGuySerial, "")
 	if err != nil {
 		http.Error(w, "Error creating user", http.StatusInternalServerError)
 		return
@@ -327,6 +332,12 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 	var currentUser User
 	var discriminator int
+	if currentUser.Profile.Discriminator == 0 {
+		currentUser.Profile.Discriminator = rand.Intn(9999)
+		if currentUser.Profile.Discriminator < 1000 {
+			currentUser.Profile.Discriminator += 1000
+		}
+	}
 	err = db.QueryRow("SELECT id, email, username, discriminator, avatar FROM users WHERE email = ?", userEmail).Scan(
 		&currentUser.ID,
 		&currentUser.Email,
@@ -341,6 +352,9 @@ func settings(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "GET" {
 		tmpl := template.Must(template.ParseFiles("templates/settings.html"))
+		if currentUser.Profile.Avatar == "" {
+			currentUser.Profile.Avatar = "default" + strconv.Itoa(rand.Intn(9)) + ".png"
+		}
 		tmpl.Execute(w, currentUser)
 	} else if r.Method == "POST" {
 		username := r.FormValue("username")
